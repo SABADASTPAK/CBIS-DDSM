@@ -42,7 +42,7 @@ meta.csv
 ```
 Only mass cases were used in this project because the boundaries of masses are more defined and better suited for YOLO object detection.
 
-⚠️ Why the Original CBIS-DDSM Cannot Be Used in Google Colab
+Why the Original CBIS-DDSM Cannot Be Used in Google Colab
 
 The original dataset (~163.5 GB) has the following limitations:
 
