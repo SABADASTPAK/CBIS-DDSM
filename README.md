@@ -257,13 +257,6 @@ This repository provides a complete, reproducible pipeline for preparing the CBI
 * Creating YOLO‑ready image/label structures
 * Running initial YOLOv8 tests
 
-This README serves as a detailed guide for anyone wishing to repeat or extend the experiments.
 
----
 
-If you want, I can also:
 
-* Add diagrams or workflow charts
-* Add commands for running YOLOv8
-* Create a shorter README version
-* Translate the README into Persian
