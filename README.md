@@ -15,7 +15,7 @@ The pipeline includes:
 
 ---
 
-## 📌 1. About the CBIS‑DDSM Dataset
+##  1. About the CBIS‑DDSM Dataset
 
 CBIS‑DDSM is a curated and cleaned version of the original DDSM dataset designed to solve issues such as:
 
@@ -44,7 +44,7 @@ Since Google Colab cannot store the full dataset, Kaggle’s 6.3 GB JPG version 
 
 ---
 
-## 📌 2. Full Preprocessing Pipeline
+##  2. Full Preprocessing Pipeline
 
 Below is a high‑level overview of the full data preparation flow.
 
@@ -178,7 +178,7 @@ CBIS-DDSM/NEW/LABELS
 
 ---
 
-## 📌 3. Image Preprocessing
+##  3. Image Preprocessing
 
 ### **3.1. Median Filtering**
 
@@ -202,7 +202,7 @@ Notebook:
 
 ---
 
-## 📌 4. Final YOLOv8 Dataset Structure
+##  4. Final YOLOv8 Dataset Structure
 
 YOLO requires the following directory structure:
 
@@ -227,7 +227,7 @@ Outputs:
 
 ---
 
-## 📌 5. YOLOv8 Experiments
+##  5. YOLOv8 Experiments
 
 ### **Experiment 1: YOLOv8n without any preprocessing or augmentation**
 
@@ -247,7 +247,7 @@ This experiment is used as a baseline and normally results in weak performance.
 
 ---
 
-## 📌 Summary
+##  Summary
 
 This repository provides a complete, reproducible pipeline for preparing the CBIS‑DDSM Kaggle dataset for YOLOv8, including:
 
