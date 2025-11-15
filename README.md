@@ -1,242 +1,269 @@
-**CBIS-DDSM Mammogram Detection Project (YOLOv8)**
+# CBIS-DDSM Mammography Object Detection Pipeline (YOLOv8)
 
-This repository documents the full preprocessing pipeline, dataset preparation, and training flow for applying YOLOv8 to mass detection in the CBIS-DDSM mammography dataset. The project was fully implemented in Google Colab using multiple Jupyter notebooks.
+This repository contains the full preprocessing and dataset preparation pipeline used for training a YOLOv8 object detection model on the **CBIS-DDSM** mammography dataset. All steps were implemented using Google Colab notebooks. Because the original CBIS-DDSM dataset is extremely large (163.5 GB) and difficult to download in Colab, this project uses the **Kaggle version** of the dataset, where DICOM files were pre‑converted to JPG.
 
- 
- **Overview**
+The pipeline includes:
 
-This project uses the Kaggle version of the CBIS-DDSM dataset, which contains JPEG images and structured CSV files derived from the original CBIS-DDSM dataset. The original dataset contains large DICOM files and cannot be downloaded or handled directly in Google Colab due to storage and download limitations. The Kaggle version provides a simplified and compressed subset suitable for deep-learning workflows.
+* Preprocessing the Kaggle CBIS‑DDSM dataset
+* Fixing broken ROI masks
+* Generating YOLO‑formatted bounding boxes
+* Verifying annotation correctness
+* Assigning unique names to each mammography image
+* Creating YOLO‑compatible directory structure
+* Applying preprocessing filters (Median + CLAHE)
+* Running YOLOv8 experiments
 
-This README summarizes:
+---
 
-Dataset description
+## 📌 1. About the CBIS‑DDSM Dataset
 
-Limitations of using the original CBIS-DDSM
+CBIS‑DDSM is a curated and cleaned version of the original DDSM dataset designed to solve issues such as:
 
-Full preprocessing pipeline
+* Outdated, non‑standard compressed formats
+* Imprecise lesion annotations
+* Difficult download and extraction process
+* Lack of standardized train/test splits
 
-YOLO-compatible dataset generation
+### Key characteristics:
 
-Training configurations and experiments
+* **Patients:** 1,566
+* **Images:** 10,239 DICOM files
+* **Lesion types:** Mass, Calcification (only Mass used in this project)
+* **Labels:** ROI mask, bounding boxes, pathology, density, BI‑RADS rating
+* **License:** CC BY 3.0
 
-**Dataset Description (Kaggle Version of CBIS-DDSM)**
+### Kaggle Version Used in This Project
 
-The Kaggle version includes:
+Since Google Colab cannot store the full dataset, Kaggle’s 6.3 GB JPG version was used. It includes:
 
-Mammogram images in JPG format (converted from original DICOM)
+* `mass_case_description_train_set.csv`
+* `mass_case_description_test_set.csv`
+* ROI masks (JPG)
+* Cropped tumor images
+* Metadata (`dicom_info.csv`, `meta.csv`)
 
-Six structured CSV files containing lesion metadata, ROI mask paths, and clinical information:
-```
+---
 
-calc_case_description_train_set.csv
+## 📌 2. Full Preprocessing Pipeline
 
-calc_case_description_test_set.csv
+Below is a high‑level overview of the full data preparation flow.
 
-mass_case_description_train_set.csv
+### **2.1. Merge DICOM paths with JPG paths**
 
-mass_case_description_test_set.csv
-
-dicom_info.csv
-
-meta.csv
-```
-Only mass cases were used in this project because the boundaries of masses are more defined and better suited for YOLO object detection.
-
-Why the Original CBIS-DDSM Cannot Be Used in Google Colab
-
-The original dataset (~163.5 GB) has the following limitations:
-
-- Download requires NBIA Data Retriever, which cannot run on Colab
-
-- File size exceeds Colab temporary storage limits
-
-- DICOM format requires heavy preprocessing
-
-- Slow download speeds in cloud environments
-
-Therefore, the Kaggle version (~6.3 GB) is used.
-
-🧩 Preprocessing Pipeline
-
-The preprocessing flow consists of multiple stages, executed through several notebooks. Below is the structured documentation of all steps.
-
-**1. 🔗 Mapping DICOM Paths to JPG Paths**
-
-The mass CSV files reference DICOM file paths that do not exist in the Kaggle dataset. Using dicom_info.csv, three new columns were created:
-
-- jpg image file path
-
-- jpg ROI mask file path
-
-- jpg cropped image file path
+Some CSV files include DICOM paths that do not exist in the Kaggle version. These were replaced using `dicom_info.csv`.
 
 Notebooks:
 
-- merge.ipynb → produces mass_train_jpg.csv
+* `merge.ipynb` → produces `mass_train_jpg.csv`
+* `merge_T.ipynb` → produces `mass_test_jpg.csv`
 
-- merge_T.ipynb → produces mass_test_jpg.csv
+---
 
-**2.  Removing Mismatched ROI Masks*
+### **2.2. Remove mismatched ROI masks**
 
-Some ROI masks did not match their corresponding image dimensions. These rows were removed.
-
-Notebooks:
-
-exclude_missmatching_ROIs.ipynb → outputs:
-
-mass_train_jpg2.csv
-
-excluded_rows_log_train.csv
-
-exclude_missmatching_ROIs_T.ipynb → outputs:
-
-mass_test_jpg2.csv
-
-excluded_rows_log_test.csv
-
-**3.  Extracting YOLO Bounding Boxes from ROI Masks**
-
-Each row corresponds to a single ROI mask. Bounding boxes were extracted and added as a new column (yolo_bbox).
+Some ROI masks did not match their image dimensions and were removed.
 
 Notebooks:
 
-extract_bbox.ipynb → mass_train_jpg2_bbox.csv
+* `exclude_missmatching_ROIs.ipynb` → train set
+* `exclude_missmatching_ROIs_T.ipynb` → test set
 
-extract_bbox_T.ipynb → mass_test_jpg2_bbox.csv
+Results:
 
-**4.  Visual Verification of Bounding Boxes**
+* Train: 1318 rows → 1253 valid
+* Test: 378 rows → 365 valid
 
-A visualization script confirmed correct extraction of bounding boxes.
+---
 
-Notebooks:
+### **2.3. Generate YOLO Bounding Boxes**
 
-verify_correctness_of_yolo_bbox.ipynb
-
-verify_correctness_of_yolo_bbox_T.ipynb
-
-**5.  Assigning Unique Names to Images**
-
-Rows were grouped by:
-
-patient_id
-
-left/right breast
-
-image view
-
-A new unique name was given to each group.
+Each row corresponds to one ROI mask. Bounding boxes were extracted from ROI masks.
 
 Notebooks:
 
-Create_new_names.ipynb → train.csv
+* `extract_bbox.ipynb`
+* `extract_bbox_T.ipynb`
 
-Create_new_names_T.ipynb → test.csv
+Output files:
 
-**6.  Generating YOLO-Compatible Images and Labels**
+* `mass_train_jpg2_bbox.csv`
+* `mass_test_jpg2_bbox.csv`
 
-For every image, a .txt label file with YOLO-formatted bounding boxes was created.
+---
+
+### **2.4. Visual Verification of Boxes**
+
+Bounding boxes and masks were displayed side‑by‑side to confirm correctness.
 
 Notebooks:
 
-images_and_labels_from_csv.ipynb → outputs images & labels for training
+* `verify_correctness_of_yolo_bbox.ipynb`
+* `verify_correctness_of_yolo_bbox_T.ipynb`
 
-images_and_labels_from_csv_T.ipynb → outputs images & labels for testing
+---
 
-Output folders:
+### **2.5. Assign Unique Names to Images**
+
+Because one image may appear multiple times (multiple tumors), a unique name is generated using:
+
+* `patient_id`
+* laterality (LEFT/RIGHT)
+* view (CC/MLO)
+
+Notebooks:
+
+* `Create_new_names.ipynb` → train.csv
+* `Create_new_names_T.ipynb` → test.csv
+
+---
+
+### **2.6. Generate YOLO‑format Images and Labels**
+
+For each unique image, a `.txt` file with YOLO bounding boxes is generated.
+
+Notebooks:
+
+* `images_and_labels_from_csv.ipynb`
+* `images_and_labels_from_csv_T.ipynb`
+
+Output structure:
+
 ```
 CBIS-DDSM/NEW/images
 CBIS-DDSM/NEW/images2
 CBIS-DDSM/NEW/labels
 CBIS-DDSM/NEW/labels2
 ```
-**7.  Ensuring No Overlap Between Train and Test**
-Notebook:
 
-find_common_new_names_in_train_and_test.ipynb
+---
 
-Result: No overlap detected.
+### **2.7. Check Train/Test Overlap**
 
-**8.  Merging Train and Test for Final YOLO Training**
-
-Train and test were merged to improve total image count.
+Ensures train and test sets are independent.
 
 Notebook:
 
-merge_train_and_test.ipynb → produces train_plus_test.csv
+* `find_common_new_names_in_train_and_test.ipynb`
 
-**9.  Final Dataset Folder Reorganization**
+Result: **No overlap detected**
 
-A unified structure was created before running the YOLO dataset preparation script.
+---
+
+### **2.8. Merge Train and Test Sets**
+
+Following the reference paper, train and test sets are merged to increase dataset size.
 
 Notebook:
 
-move.ipynb
+* `merge_train_and_test.ipynb`
 
-Outputs:
+Output: `train_plus_test.csv`
+
+---
+
+### **2.9. Organize Final Folder Structure**
+
+Both image folders and label folders are merged.
+
+Notebook:
+
+* `move.ipynb`
+
+Output:
+
 ```
 CBIS-DDSM/NEW/IMAGES
 CBIS-DDSM/NEW/LABELS
 ```
-**Image Preprocessing**
 
-**1. Median Filtering (3×3)**
+---
 
-Reduces noise while preserving tumor boundaries.
+## 📌 3. Image Preprocessing
 
-**2. CLAHE Contrast Enhancement**
+### **3.1. Median Filtering**
 
-Different tile grid sizes and clip limits were tested.
+A 3×3 median filter was applied to reduce digitization noise while preserving edges.
 
-Optimal settings:
+### **3.2. CLAHE (Contrast Limited Adaptive Histogram Equalization)**
 
-- Tile Grid Size = (4,4) with ClipLimit ≈ 3–4
+Different combinations of parameters were tested:
 
-- For softer images: (8,8) with ClipLimit = 15–25
+* Tile Grid Sizes: (2,2), (4,4), (8,8)
+* Clip Limits: 2, 3, 4, 10, 15–35
+
+**Best results:**
+
+* (4×4) with ClipLimit 3–4 → best detail enhancement
+* (8×8) with ClipLimit 15–25 → smoother output
 
 Notebook:
 
-different_CLAHEs.ipynb
+* `different_CLAHEs.ipynb`
 
-📦 Final YOLOv8 Dataset Structure
+---
+
+## 📌 4. Final YOLOv8 Dataset Structure
+
+YOLO requires the following directory structure:
+
 ```
 dataset/
-├── images/
-│   ├── train/
-│   └── val/
-├── labels/
-│   ├── train/
-│   └── val/
+ ├── images/
+ │    ├── train/
+ │    └── val/
+ ├── labels/
+ │    ├── train/
+ │    └── val/
 ```
+
 Notebook:
 
-Prepare_dataset_structure.ipynb
+* `Prepare_dataset_structure.ipynb`
 
-**YOLOv8 Experiments**
-**Experiment 1 — YOLOv8n, No Preprocessing, No Augmentation**
+Outputs:
 
-Parameters:
-```
-Epochs: 100
+* Final train/val split
+* Final `.yaml` configuration file
 
-Image Size: 640
+---
 
-Batch: 16
+## 📌 5. YOLOv8 Experiments
 
-Pretrained model: yolov8n.pt (COCO)
-```
-Results were expectedly weak due to no preprocessing or augmentation.
+### **Experiment 1: YOLOv8n without any preprocessing or augmentation**
 
-Output saved to:
-```
-/content/drive/MyDrive/yolo_results/yolov8_custom
-```
-A short explanation of COCO pretraining and batch size behavior is included in the notebook and thesis.
+**Settings:**
 
-**Summary**
+* Epochs: 100
+* Image size: 640
+* Batch: 16
+* Pretrained weights: `yolov8n.pt` (COCO)
 
-This project implements a complete CBIS-DDSM preprocessing pipeline suitable for YOLOv8 mass detection. The stages include path correction, ROI verification, bounding‐box extraction, image enhancement, dataset restructuring, and model training.
+This experiment is used as a baseline and normally results in weak performance.
 
+### Notes on YOLO Parameters
 
-This project is based on the methodology presented in:
+* **Batch size** controls stability, GPU memory usage, and speed.
+* **Pretrained weights** (COCO) greatly reduce training time.
 
-A YOLO-Based Model for Breast Cancer Detection in Mammograms(https://link.springer.com/article/10.1007/s12559-023-10189-6)
+---
+
+## 📌 Summary
+
+This repository provides a complete, reproducible pipeline for preparing the CBIS‑DDSM Kaggle dataset for YOLOv8, including:
+
+* Cleaning and fixing dataset inconsistencies
+* Extracting bounding boxes from masks
+* Preprocessing (median filter + CLAHE)
+* Creating YOLO‑ready image/label structures
+* Running initial YOLOv8 tests
+
+This README serves as a detailed guide for anyone wishing to repeat or extend the experiments.
+
+---
+
+If you want, I can also:
+
+* Add diagrams or workflow charts
+* Add commands for running YOLOv8
+* Create a shorter README version
+* Translate the README into Persian
